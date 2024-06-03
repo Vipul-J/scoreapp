@@ -11,6 +11,7 @@ app.use(bodyParser.json());
 app.use(cors());
 
 const db = mysql.createConnection(config.mysql);
+app.get("/", (req, res) => res.send("Express on Vercel"));
 
 db.connect((err) => {
     if (err) {
