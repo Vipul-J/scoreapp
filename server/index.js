@@ -254,8 +254,6 @@ app.post('/score', (req, res) => {
     });
 });
 
-
-
 app.get('/team-scores/:eventId/:selectedRound', (req, res) => {
     const { eventId, selectedRound } = req.params;
 
