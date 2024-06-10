@@ -1,24 +1,41 @@
-import logo from './logo.svg';
-import './App.css';
+import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+import AddTeam from "./pages/Admin/Teams/AddTeam";
+import GetTeams from "./pages/Admin/Teams/GetTeams";
+import MasterHome from "./pages/MasterHome";
+import ScorerDashboard from "./pages/Scorer/Dashboard";
+// import AdminDashboard from "./pages/Admin/Events/AddSubEve";
 
+import Scoring from "./pages/Scorer/Scoring";
+import Dashboard from "./pages/Admin/Teams/Dashboard";
+import AddEvents from "./pages/Admin/Events/AddEvents";
+import GetEvents from "./pages/Admin/Events/GetEvents";
+import AddUsers from "./pages/Admin/Users/AddUsers";
+import GetUsers from "./pages/Admin/Users/GetUsers";
+import GetScores from "./pages/Admin/Scores/GetScores";
 function App() {
   return (
-    <div className="App">
-      <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>
-          Edit <code>src/App.js</code> and save to reload.
-        </p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn React
-        </a>
-      </header>
-    </div>
+    <Router>
+      <Routes>
+        <Route exact path="/" element={<MasterHome />} />
+        <Route exact path="/admin/dashboard" element={<Dashboard />} />
+
+        {/* <Route exact path="/admin/dashboard" element={<AdminDashboard />} /> */}
+        <Route exact path="/admin/getTeams" element={<GetTeams />} />
+        <Route exact path="/admin/postTeams" element={<AddTeam />} />
+
+        <Route exact path="/admin/postEvents" element={<AddEvents />} />
+        <Route exact path="/admin/getEvents" element={<GetEvents />} />
+
+        <Route exact path="/admin/postUsers" element={<AddUsers />} />
+        <Route exact path="/admin/getUsers" element={<GetUsers />} />
+
+        <Route exact path="/admin/getScores" element={<GetScores />} />
+
+
+        <Route exact path="/scorer/dashboard" element={<ScorerDashboard />} />
+        <Route exact path="/scorer/postScores" element={<Scoring />} /> 
+      </Routes>
+    </Router>
   );
 }
 
