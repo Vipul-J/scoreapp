@@ -24,8 +24,10 @@ db.connect((err) => {
         'CREATE TABLE IF NOT EXISTS teams (id INT AUTO_INCREMENT PRIMARY KEY, name VARCHAR(255) NOT NULL)',
         'CREATE TABLE IF NOT EXISTS events (id INT AUTO_INCREMENT PRIMARY KEY, eventName VARCHAR(255) NOT NULL, facultyCoordinator VARCHAR(255) NOT NULL)',
         'CREATE TABLE IF NOT EXISTS users (id INT AUTO_INCREMENT PRIMARY KEY, username VARCHAR(255) NOT NULL UNIQUE, password VARCHAR(255) NOT NULL)',
-        'CREATE TABLE IF NOT EXISTS team_scores (event_id INT, team_id INT, score INT, selected_round VARCHAR(255), FOREIGN KEY (event_id) REFERENCES events(id), FOREIGN KEY (team_id) REFERENCES teams(id))'
+        'CREATE TABLE IF NOT EXISTS team_scores (event_id INT, team_id INT, score INT, selected_round VARCHAR(255), FOREIGN KEY (event_id) REFERENCES events(id), FOREIGN KEY (team_id) REFERENCES teams(id))',
+        'CREATE TABLE IF NOT EXISTS event_scores (event_id INT, team_id INT, round1_score INT, round2_score INT, FOREIGN KEY (event_id) REFERENCES events(id), FOREIGN KEY (team_id) REFERENCES teams(id))'
     ];
+    
     
 
     // Execute each CREATE TABLE statement
@@ -254,16 +256,84 @@ app.post('/score', (req, res) => {
     });
 });
 
+app.get('/event-scores', (req, res) => {
+    try {
+      // Query to fetch event scores
+      const sql = `
+        SELECT e.id as event_id, e.eventName, t.name as team_name, 
+               ts.round1_score, ts.round2_score, (ts.round1_score + ts.round2_score) as total_score
+        FROM team_scores ts
+        JOIN events e ON ts.event_id = e.id
+        JOIN teams t ON ts.team_id = t.id
+      `;
+  
+      // Execute the query
+      db.query(sql, (err, results) => {
+        if (err) {
+          console.error('Error fetching event scores:', err);
+          return res.status(500).json({ error: 'Internal server error' });
+        }
+        // Return the results as JSON
+        res.json(results);
+      });
+    } catch (error) {
+      console.error('Error fetching event scores:', error);
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  });
+
+app.put('/updateScore/:eventId/:round/:teamId', (req, res) => {
+    const { eventId, round, teamId } = req.params;
+    const { score } = req.body;
+    const sql = 'UPDATE team_scores SET score = ? WHERE team_id = ? AND event_id = ? AND selected_round = ?';
+    db.query(sql, [score, teamId, eventId, round], (err, result) => {
+        if (err) {
+            console.error('Error updating score:', err);
+            return res.status(500).json({ error: 'Internal server error' });
+        }
+        res.send('Score updated successfully');
+    });
+});
+
+app.delete('/deleteScore/:eventId/:round/:teamId', (req, res) => {
+    const { eventId, round, teamId } = req.params;
+    const sql = 'DELETE FROM team_scores WHERE team_id = ? AND event_id = ? AND selected_round = ?';
+    db.query(sql, [teamId, eventId, round], (err, result) => {
+        if (err) {
+            console.error('Error deleting score:', err);
+            return res.status(500).json({ error: 'Internal server error' });
+        }
+        res.send('Score deleted successfully');
+    });
+});
+
 app.get('/team-scores/:eventId/:selectedRound', (req, res) => {
     const { eventId, selectedRound } = req.params;
 
-    const sql = `
-        SELECT ts.team_id, t.name as team_name, ts.score, ts.selected_round
-        FROM team_scores ts
-        JOIN teams t ON ts.team_id = t.id
-        WHERE ts.event_id = ? AND ts.selected_round = ?
-    `;
-    db.query(sql, [eventId, selectedRound], (err, results) => {
+    let sql;
+    let queryParams = [eventId];
+
+    if (selectedRound === 'ROUND 1 and ROUND 2') {
+        sql = `
+            SELECT ts.team_id, t.name as team_name, ts.selected_round, SUM(ts.score) as total_score, 
+                   GROUP_CONCAT(ts.score ORDER BY ts.selected_round) as round_scores
+            FROM team_scores ts
+            JOIN teams t ON ts.team_id = t.id
+            WHERE ts.event_id = ? AND (ts.selected_round = 'ROUND 1' OR ts.selected_round = 'ROUND 2')
+            GROUP BY ts.team_id, t.name, ts.selected_round
+            ORDER BY ts.team_id, ts.selected_round
+        `;
+    } else {
+        sql = `
+            SELECT ts.team_id, t.name as team_name, ts.score, ts.selected_round
+            FROM team_scores ts
+            JOIN teams t ON ts.team_id = t.id
+            WHERE ts.event_id = ? AND ts.selected_round = ?
+        `;
+        queryParams.push(selectedRound);
+    }
+
+    db.query(sql, queryParams, (err, results) => {
         if (err) {
             console.error('Error fetching team scores:', err);
             return res.status(500).json({ error: 'Internal server error' });
@@ -271,6 +341,7 @@ app.get('/team-scores/:eventId/:selectedRound', (req, res) => {
         res.json(results);
     });
 });
+
 
 
 
