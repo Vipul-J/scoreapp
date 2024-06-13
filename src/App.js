@@ -12,6 +12,8 @@ import GetEvents from "./pages/Admin/Events/GetEvents";
 import AddUsers from "./pages/Admin/Users/AddUsers";
 import GetUsers from "./pages/Admin/Users/GetUsers";
 import GetScores from "./pages/Admin/Scores/GetScores";
+import TwoRoundsScores from "./pages/Admin/Scores/TwoRoundsScores";
+import ScoreReport from "./pages/Admin/Scores/ScoreReport";
 function App() {
   return (
     <Router>
@@ -30,6 +32,9 @@ function App() {
         <Route exact path="/admin/getUsers" element={<GetUsers />} />
 
         <Route exact path="/admin/getScores" element={<GetScores />} />
+        <Route exact path="/admin/cumScores" element={<TwoRoundsScores />} />
+        <Route exact path="/admin/scoreReport" element={<ScoreReport />} />
+
 
 
         <Route exact path="/scorer/dashboard" element={<ScorerDashboard />} />
