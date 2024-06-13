@@ -24,11 +24,8 @@ db.connect((err) => {
         'CREATE TABLE IF NOT EXISTS teams (id INT AUTO_INCREMENT PRIMARY KEY, name VARCHAR(255) NOT NULL)',
         'CREATE TABLE IF NOT EXISTS events (id INT AUTO_INCREMENT PRIMARY KEY, eventName VARCHAR(255) NOT NULL, facultyCoordinator VARCHAR(255) NOT NULL)',
         'CREATE TABLE IF NOT EXISTS users (id INT AUTO_INCREMENT PRIMARY KEY, username VARCHAR(255) NOT NULL UNIQUE, password VARCHAR(255) NOT NULL)',
-        'CREATE TABLE IF NOT EXISTS team_scores (event_id INT, team_id INT, score INT, selected_round VARCHAR(255), FOREIGN KEY (event_id) REFERENCES events(id), FOREIGN KEY (team_id) REFERENCES teams(id))',
-        'CREATE TABLE IF NOT EXISTS event_scores (event_id INT, team_id INT, round1_score INT, round2_score INT, FOREIGN KEY (event_id) REFERENCES events(id), FOREIGN KEY (team_id) REFERENCES teams(id))'
+        'CREATE TABLE IF NOT EXISTS team_scores (event_id INT, team_id INT, score INT, selected_round VARCHAR(255), FOREIGN KEY (event_id) REFERENCES events(id), FOREIGN KEY (team_id) REFERENCES teams(id))'
     ];
-    
-    
 
     // Execute each CREATE TABLE statement
     createTables.forEach(sql => {
@@ -208,8 +205,6 @@ app.get('/faculty-coordinator/:id', (req, res) => {
     });
 });
 
-// Server-side code
-
 // SCORER - MarkScore
 
 app.post('/score', (req, res) => {
@@ -256,31 +251,32 @@ app.post('/score', (req, res) => {
     });
 });
 
+// Adjusted backend endpoint to fetch event scores with individual round scores
 app.get('/event-scores', (req, res) => {
     try {
-      // Query to fetch event scores
-      const sql = `
-        SELECT e.id as event_id, e.eventName, t.name as team_name, 
-               ts.round1_score, ts.round2_score, (ts.round1_score + ts.round2_score) as total_score
-        FROM team_scores ts
-        JOIN events e ON ts.event_id = e.id
-        JOIN teams t ON ts.team_id = t.id
-      `;
-  
-      // Execute the query
-      db.query(sql, (err, results) => {
-        if (err) {
-          console.error('Error fetching event scores:', err);
-          return res.status(500).json({ error: 'Internal server error' });
-        }
-        // Return the results as JSON
-        res.json(results);
-      });
+        const sql = `
+            SELECT e.eventName, t.name as team_name, 
+                   MAX(CASE WHEN ts.selected_round = 'ROUND 1' THEN ts.score ELSE NULL END) as round1_score,
+                   MAX(CASE WHEN ts.selected_round = 'ROUND 2' THEN ts.score ELSE NULL END) as round2_score,
+                   MAX(CASE WHEN ts.selected_round = 'ROUND 3' THEN ts.score ELSE NULL END) as round3_score
+            FROM team_scores ts
+            JOIN events e ON ts.event_id = e.id
+            JOIN teams t ON ts.team_id = t.id
+            GROUP BY e.eventName, t.name
+        `;
+
+        db.query(sql, (err, results) => {
+            if (err) {
+                console.error('Error fetching event scores:', err);
+                return res.status(500).json({ error: 'Internal server error' });
+            }
+            res.json(results);
+        });
     } catch (error) {
-      console.error('Error fetching event scores:', error);
-      res.status(500).json({ error: 'Internal server error' });
+        console.error('Error fetching event scores:', error);
+        res.status(500).json({ error: 'Internal server error' });
     }
-  });
+});
 
 app.put('/updateScore/:eventId/:round/:teamId', (req, res) => {
     const { eventId, round, teamId } = req.params;
@@ -341,9 +337,6 @@ app.get('/team-scores/:eventId/:selectedRound', (req, res) => {
         res.json(results);
     });
 });
-
-
-
 
 app.listen(port, () => {
     console.log(`Server is running on port ${port}`);
