@@ -7,11 +7,17 @@ const config = require('./config');
 const app = express();
 const port = 3001;
 
+const corsOptions = {
+    origin: '*',
+    optionsSuccessStatus: 200  
+};
+
+app.options('*', cors(corsOptions));
 app.use(bodyParser.json());
-app.use(cors());
+app.use(cors(corsOptions));
 
 const db = mysql.createConnection(config.mysql);
-app.get("/", (req, res) => res.send("Express on Vercel"));
+app.get("/", cors(corsOptions), (req, res) => res.send("Express on Vercel"));
 
 db.connect((err) => {
     if (err) {
@@ -19,7 +25,6 @@ db.connect((err) => {
     }
     console.log('Connected to MySQL database');
 
-    // Create tables if not exists
     const createTables = [
         'CREATE TABLE IF NOT EXISTS teams (id INT AUTO_INCREMENT PRIMARY KEY, name VARCHAR(255) NOT NULL)',
         'CREATE TABLE IF NOT EXISTS events (id INT AUTO_INCREMENT PRIMARY KEY, eventName VARCHAR(255) NOT NULL, facultyCoordinator VARCHAR(255) NOT NULL)',
@@ -27,7 +32,6 @@ db.connect((err) => {
         'CREATE TABLE IF NOT EXISTS team_scores (event_id INT, team_id INT, score INT, selected_round VARCHAR(255), FOREIGN KEY (event_id) REFERENCES events(id), FOREIGN KEY (team_id) REFERENCES teams(id))'
     ];
 
-    // Execute each CREATE TABLE statement
     createTables.forEach(sql => {
         db.query(sql, (err, result) => {
             if (err) {
@@ -40,8 +44,7 @@ db.connect((err) => {
 });
 
 // ADMIN - Teams
-
-app.post('/postTeam', (req, res) => {
+app.post('/postTeam', cors(corsOptions), (req, res) => {
     const team = { name: req.body.name };
     const sql = 'INSERT INTO teams SET ?';
     db.query(sql, team, (err, result) => {
@@ -50,7 +53,7 @@ app.post('/postTeam', (req, res) => {
     });
 });
 
-app.get('/teams', (req, res) => {
+app.get('/teams', cors(corsOptions), (req, res) => {
     const sql = 'SELECT * FROM teams';
     db.query(sql, (err, results) => {
         if (err) throw err;
@@ -58,7 +61,7 @@ app.get('/teams', (req, res) => {
     });
 });
 
-app.put('/updateTeam/:id', (req, res) => {
+app.put('/updateTeam/:id', cors(corsOptions), (req, res) => {
     const id = req.params.id;
     const newName = req.body.name;
 
@@ -69,7 +72,7 @@ app.put('/updateTeam/:id', (req, res) => {
     });
 });
 
-app.delete('/deleteTeam/:id', (req, res) => {
+app.delete('/deleteTeam/:id', cors(corsOptions), (req, res) => {
     const id = req.params.id;
 
     const sql = 'DELETE FROM teams WHERE id = ?';
@@ -80,8 +83,7 @@ app.delete('/deleteTeam/:id', (req, res) => {
 });
 
 // ADMIN - Events
-
-app.post('/postEvents', (req, res) => {
+app.post('/postEvents', cors(corsOptions), (req, res) => {
     const event = { eventName: req.body.eventName, facultyCoordinator: req.body.facultyCoordinator };
     const sql = 'INSERT INTO events SET ?';
     db.query(sql, event, (err, result) => {
@@ -90,7 +92,7 @@ app.post('/postEvents', (req, res) => {
     });
 });
 
-app.get('/events', (req, res) => {
+app.get('/events', cors(corsOptions), (req, res) => {
     const sql = 'SELECT * FROM events';
     db.query(sql, (err, results) => {
         if (err) throw err;
@@ -98,7 +100,7 @@ app.get('/events', (req, res) => {
     });
 });
 
-app.put('/updateEvent/:id', (req, res) => {
+app.put('/updateEvent/:id', cors(corsOptions), (req, res) => {
     const id = req.params.id;
     const { eventName, facultyCoordinator } = req.body;
 
@@ -109,7 +111,7 @@ app.put('/updateEvent/:id', (req, res) => {
     });
 });
 
-app.delete('/deleteEvent/:id', (req, res) => {
+app.delete('/deleteEvent/:id', cors(corsOptions), (req, res) => {
     const id = req.params.id;
 
     const sql = 'DELETE FROM events WHERE id = ?';
@@ -120,8 +122,7 @@ app.delete('/deleteEvent/:id', (req, res) => {
 });
 
 // ADMIN - Users
-
-app.post('/register', (req, res) => {
+app.post('/register', cors(corsOptions), (req, res) => {
     const { username, password } = req.body;
 
     const sqlCheckUser = 'SELECT * FROM users WHERE username = ?';
@@ -145,7 +146,7 @@ app.post('/register', (req, res) => {
     });
 });
 
-app.get('/users', (req, res) => {
+app.get('/users', cors(corsOptions), (req, res) => {
     const sql = 'SELECT * FROM users';
     db.query(sql, (err, results) => {
         if (err) {
@@ -156,7 +157,7 @@ app.get('/users', (req, res) => {
     });
 });
 
-app.post('/login', (req, res) => {
+app.post('/login', cors(corsOptions), (req, res) => {
     const { username, password } = req.body;
     const sql = 'SELECT * FROM users WHERE username = ?';
     db.query(sql, [username], (err, results) => {
@@ -175,7 +176,7 @@ app.post('/login', (req, res) => {
     });
 });
 
-app.delete('/deleteUser/:id', (req, res) => {
+app.delete('/deleteUser/:id', cors(corsOptions), (req, res) => {
     const userId = req.params.id;
 
     const sql = 'DELETE FROM users WHERE id = ?';
@@ -189,8 +190,7 @@ app.delete('/deleteUser/:id', (req, res) => {
 });
 
 // SCORER - MarkScore
-
-app.get('/faculty-coordinator/:id', (req, res) => {
+app.get('/faculty-coordinator/:id', cors(corsOptions), (req, res) => {
     const eventId = req.params.id;
     const sql = 'SELECT facultyCoordinator FROM events WHERE id = ?';
     db.query(sql, [eventId], (err, results) => {
@@ -205,17 +205,13 @@ app.get('/faculty-coordinator/:id', (req, res) => {
     });
 });
 
-// SCORER - MarkScore
-
-app.post('/score', (req, res) => {
+app.post('/score', cors(corsOptions), (req, res) => {
     const { eventId, selectedRound, teams } = req.body;
 
-    // Validate input
     if (!eventId || !selectedRound || !teams || !Array.isArray(teams)) {
         return res.status(400).json({ error: 'Invalid input' });
     }
 
-    // Check if scores have already been submitted for the selected round and event
     const checkExistingScoresQuery = 'SELECT * FROM team_scores WHERE event_id = ? AND selected_round = ? LIMIT 1';
     db.query(checkExistingScoresQuery, [eventId, selectedRound], (err, results) => {
         if (err) {
@@ -226,7 +222,6 @@ app.post('/score', (req, res) => {
             return res.status(400).json({ error: 'Scores have already been submitted for this round and event. Please go to admin and verify.' });
         }
 
-        // Insert team scores into 'team_scores' table
         const teamInsertPromises = teams.map(({ id, score }) => {
             return new Promise((resolve, reject) => {
                 const insertTeamScoreQuery = 'INSERT INTO team_scores (event_id, team_id, score, selected_round) VALUES (?, ?, ?, ?)';
@@ -251,8 +246,7 @@ app.post('/score', (req, res) => {
     });
 });
 
-// Adjusted backend endpoint to fetch event scores with individual round scores
-app.get('/event-scores', (req, res) => {
+app.get('/event-scores', cors(corsOptions), (req, res) => {
     try {
         const sql = `
             SELECT e.eventName, t.name as team_name, 
@@ -278,7 +272,7 @@ app.get('/event-scores', (req, res) => {
     }
 });
 
-app.put('/updateScore/:eventId/:round/:teamId', (req, res) => {
+app.put('/updateScore/:eventId/:round/:teamId', cors(corsOptions), (req, res) => {
     const { eventId, round, teamId } = req.params;
     const { score } = req.body;
     const sql = 'UPDATE team_scores SET score = ? WHERE team_id = ? AND event_id = ? AND selected_round = ?';
@@ -291,7 +285,7 @@ app.put('/updateScore/:eventId/:round/:teamId', (req, res) => {
     });
 });
 
-app.delete('/deleteScore/:eventId/:round/:teamId', (req, res) => {
+app.delete('/deleteScore/:eventId/:round/:teamId', cors(corsOptions), (req, res) => {
     const { eventId, round, teamId } = req.params;
     const sql = 'DELETE FROM team_scores WHERE team_id = ? AND event_id = ? AND selected_round = ?';
     db.query(sql, [teamId, eventId, round], (err, result) => {
@@ -303,7 +297,7 @@ app.delete('/deleteScore/:eventId/:round/:teamId', (req, res) => {
     });
 });
 
-app.get('/team-scores/:eventId/:selectedRound', (req, res) => {
+app.get('/team-scores/:eventId/:selectedRound', cors(corsOptions), (req, res) => {
     const { eventId, selectedRound } = req.params;
 
     let sql;
